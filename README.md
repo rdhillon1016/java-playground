@@ -1,3 +1,16 @@
+# General
+
+The entrypoint of a Java application is a main method:
+```java
+public class MyFirstClass {
+    public static void main(String... args) {
+        System.out.println("Hello, World!");
+    }
+}
+```
+
+You can have multiple top-level classes in a Java file, but only one `public` class.
+
 # Data Types
 
 - `float`: composed of significand (digits) and an exponent (base 2, tells you where the decimal is).
@@ -8,6 +21,10 @@ When an integer overflows, it rolls over to the minimum value and begins countin
 # Keywords
 
 `final` variables are used to create constants. `final` methods prevent method overriding. `final` classes prevent inheritance.
+
+`void` indicates a method with no return value..
+
+`static` indicates a static member. Static methods/attributes can be accessed without creating an object of a class.
 
 # Exceptions
 
@@ -26,6 +43,8 @@ Executable jars will usually contain a `Main-Class` header in `MANIFEST.MF` that
 JAR **sealing** is a security and consistency mechanism that ensures all classes in a specific package within a JAR file are loaded from the same JAR file. This prevents situations where classes from the same package are spread across multiple JAR files, which could lead to unpredictable behavior or security risks (prevents malicious or unintended classes from modifying behavior by injecting different implementations into the same package.).
 
 The **compile classpath** is a list of dependencies that are required for the JDK to be able to compile Java code into `.class` files. The runtime classpath is a list of dependencies is required to actually run the compiled Java code.
+
+A build tool, like **Maven** or Gradle, helps you to build your project, and manage any dependencies (like additional libraries) that you want to use in your Java code. Using a build tool will also make it easier to share your application and build it on a different machine.
 
 # Annotations
 
