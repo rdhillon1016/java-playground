@@ -26,6 +26,20 @@ When an integer overflows, it rolls over to the minimum value and begins countin
 
 `static` indicates a static member. Static methods/attributes can be accessed without creating an object of a class.
 
+# Interfaces/Abstract Classes
+
+Interfaces form a contract between the class and the outside world, and this contract is enforced at build time by the compiler. If your class claims to implement an interface, all methods defined by that interface must appear in its source code before the class will successfully compile.
+
+Classes can implement multiple interfaces. However, if 2 or more interfaces have a method with the same type signature and name, the implementing class must override that method.
+
+Abstract classes are partially implemented classes with more of a focus on code reusability. These partial classes are then extended by subclasses in a concept called inheritance. Abstract classes are meant to model an "is-a?" relationship between superclasses and subclasses. Multiple inheritance (one subclass inheriting from multiple other classes) is not allowed in Java, therefore you should really consider when the relationship you're describing between classes is really an "is-a" relationship before using inheritance. If you need to use code from multiple classes, use composition instead.
+
+Composition models a "has-a?" relationship. Class A, instead of extending Class B, instead holds an instance of Class B in its state and uses it, thereby demonstrating the "has-a" relationship.
+
+# Packages
+
+A package is a namespace that organizes a set of related classes and interfaces.
+ 
 # Exceptions
 
 Unchecked exceptions (ones that extend `RuntimeException`) are exceptions that are not checked for by the compiler. By “checked for”, we mean the compiler doesn’t check to see if it is caught or explicitly thrown by any calling methods. `RuntimeException` is intended to be used for programmer errors. As such it should never be caught, except in rare circumstances.
@@ -108,3 +122,6 @@ Java EE (now Jakarta EE) is a set of specifications and APIs for building enterp
 
 Java EE was originally maintained by Oracle, but it was submitted to the Eclipse Foundation. Oracle owens the trademark for the names `Java` and `javax`, so Java EE was renamed to Jakarta EE.
 
+## Misc
+
+Java [does not have tail call optimization](https://softwareengineering.stackexchange.com/a/216848).

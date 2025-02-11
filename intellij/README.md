@@ -23,3 +23,11 @@ IntelliJ provides handy features for creating tests (generate test, navigate to 
 You can also press **Shift** twice to use the "Search Everywhere" feature. This searches through your project files and directories, as well as your project settings and IntellIJ IDEA settings.
 
 You can press **Ctrl+Shift+F** to use the "Find in Files" feature.
+
+# Important Development Environment Notes
+
+Note that you may be able to solve some issues with opening WSL2 projects in Windows IntelliJ by [changing file paths](https://youtrack.jetbrains.com/issue/PY-63825/IDE-confused-with-wsl.localhost-and-wsl-paths-and-treat-them-as-two-different-projects) to use `wsl$` instead of `wsl.localhost`.
+
+For example, when the Maven home path was `\\wsl.localhost\Ubuntu\opt\apache-maven-3.9.7`, I would get the sync error `Ubuntu does not have configured Maven` (although the error didn't actually seem to be true, as the project worked fine). It was annoying having the error there, and the fix was to change the home path to `\\wsl$\Ubuntu\opt\apache-maven-3.9.7`.
+
+Another handy source for setting up IntelliJ with WSL2 is [https://sii.pl/blog/en/windows-subsystem-for-linux-wsl-2-part-2-dev-tools-configuration/](https://sii.pl/blog/en/windows-subsystem-for-linux-wsl-2-part-2-dev-tools-configuration/).
