@@ -133,6 +133,192 @@ public class CommentService {
 
 Note how, in that example, we didn't injent the `CommentProcessor` directly in the `CommentService` bean. Since `CommentService` bean is a singleton, it will only be instantiated once by the context, and thus you'll end up with only one injected instance of `CommentProcessor`. Each call of `sendComment()` will use this unique instance.
 
+# Spring AOP
+
+Aspects are a way the framework intercepts method calls and possibly alters the execution of methods. For example, sometimes it’s not relevant to have parts of the code (like logging and tracing) in the same place with the business logic because it makes the app more difficult to understand.
+
+Aspects are used by Spring is implementing transactionality (for data consistency) and security features, just to name a couple.
+
+An aspect is simply a piece of logic the framework executes when you call specific methods of your choice.
+
+When designing the aspect, you define the following:
+- *What* code you want Spring to execute when you call specific methods.
+- *When* the app should execute this logic of the aspect (e.g before the method call). This is named the **advice**.
+- Which methods the framework needs to intercept and execute the aspect for them. This is named the **pointcut**.
+
+There is also the concept of a **join point** in aspect-oriented programming, which defines the event that triggers the execution of an aspect. But with Spring, this is always a method call.
+
+Objects that use aspects need to be added to the Spring context. The bean that declares the method intercepted by an aspect is named the **target object**.
+
+When an object is an aspect target and you request it from the context, Spring doesn't give you the actual object. It gives you a *proxy* object. When a method is invoked on the proxy object, it calls the aspect logic and then delegates to the actual object's method. This is called **weaving**.
+
+You create an aspect by:
+1. Annotating the configuration class with `@EnableAspectJAutoProxy`.
+2. Create a new class, annotated with `@Aspect`. Add a bean for it to the Spring context.
+3. Define and implement a method that will implement the aspect logic and tell Spring when and which methods to intercept using an advice annotation:
+    ```java
+    @Around("execution(* services.*.*(..))")
+    public void log(ProceedingJoinPoint joinPoint) throws Throwable {
+        // aspect logic here
+        joinPoint.proceed(); 
+    }
+    ```
+    The string inside the `@Around` is wrriten in AspectJ pointcut language. The `ProceedingJoinPoint joinPoint` represents the intercepted method and the main thing you do with it is tell it when to delegate further to the actual method.
+
+Aspects can also intercept the parameters used to call the method or the value the intercepted method returns.
+
+Make sure you don't go overboard though. The whole idea of decoupling a part of the logic is to avoid duplication and hide what's irrelevant.
+
+You can also use annotations to mark methods you want an aspect to intercept. You need to define a custom runtime annotation, like 
+
+```java
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.METHOD)
+public @interface ToLog {
+}
+```
+
+and then use it in the aspect pointcut expression like `@Around("@annotation(ToLog)")`.
+
+By default, Spring doesn’t guarantee the order in which two aspects in the same execution chain are called. If you need to define the aspects' execution order, use the `@Order` annotation which receives an ordinal.
+
+# Spring Boot
+
+A servlet container is the entrypoint and exit point for HTTP requests in a Spring Boot app. Spring uses a servlet instance under the hood for requests.
+
+Spring Boot offers:
+- Simplified project creation: You can use a project initialization service to get an empty but configured skeleton app.
+- Dependency starters. You don't have to worry about version compatibility or which dependencies you need for one particular purpose.
+- Autoconfiguration based on dependencies. You only need to change the configurations provided by Spring Boot that don't match what you need.
+
+A Spring Boot projected generated with Spring Initializr usually contains the following:
+- The app's main class annotated with `@SpringBootApplication`.
+- The artifact `spring-boot-starter-parent` as a parent in the `pom.xml`. This provides compatible versions for dependencies you'll add to your project.
+- The plugin `spring-boot-maven-plugin` which is responsible for adding part of the default configurations you'll observe in your project.
+- Dependencies that you specify.
+- An `application.properties` file.
+
+Dependency starters are capability-oriented groups of compatible dependencies. `spring-boot-starter-web` includes dependencies like Tomcat, context, and AOP.
+
+A controller is a component of the Spring Boot web app that contains methods executed for a specific HTTP request. It is annotated with `@Controller` (another stereotype annotation).
+
+```java
+@Controller
+public class MainController {
+    @RequestMapping("/home")
+    public String home() {
+        return "home.html";
+    }
+}
+```
+
+The anatomy of an HTTP request to a Spring Boot app using Spring MVC is something like this:
+1. Client makes request.
+2. Tomcat gets the request. It calls a servlet component for the request. In the case of Spring MVC, Tomcat called a servlet Spring Boot configured called a *dispatcher servlet*.
+3. The dispatcher servlet (also known as a *front controller*) finds what controller action to call for the request by delegating to a component named *handler mapping*.
+4. The dispatcher servlet calls that specific controller action.
+5. The controller does stuff, and returns the page name it needs to render for the response (i.e the view) to the servlet.
+6. The dispatcher servlet delegates to the view resolver to find the view, and returns the rendered view in the response.
+
+In web apps, you can use other bean scopes that are relevant only to web applications:
+- Request scope. An instance for every HTTP request.
+- Session scope. An instance for every HTTP session.
+- Application scope. A unique instance in the app's context.  The application scope is close to how a singleton works. The difference is that you can’t have more instances of the same type in the context.
+
+For REST services, we tell the dispatcher servlet not to look for a view. Use the `@RestController` annotation rather than `@Controller`. By default, responses are serialized to JSON when you return an object.
+
+If you want to customize the HTTP response, you can return a `ResponseEntity<T>` object. You can also catch exceptions in the controller and modify the `ResponseEntity` accordingly.
+
+Alternatively, you can use a REST controller advice to intercept exceptions and apply custom logic to handle the error case. The controller can focus on the happy case. Use the `@RestControllerAdvice` annotation.
+
+Use the `@RequestBody` annotation on a parameter of the controller's action to denote that the request body (Spring assumes that this will be in JSON by default) should be deserialized into an object of that type.
+
+# REST Clients
+
+There are 3 REST clients that you can use from a Spring app (although `RestTemplate` will soon be deprecated):
+
+- Spring Cloud OpenFeign. All you have to do is declare an interface annotated with `@FeignClient` and define the requests that you need implemented in the interface (with URL, request header, request body, etc details). `OpenFeign` will handle the actual implementation for you.
+- RestTemplate. This is more imperative.
+- WebClient. This is built on a methodology called *reactive programmming*.
+
+# Data sources
+
+The data source is a component that manages connections to the server handling the database. A data source object can efficiently manage the connections to minimize the number of unnecessary operations. One commonly used one is HikariCP (Hikari connection pool). Spring Boot considers HikariCP the default data source implementation.
+
+One choice as a tool for working with a relational database besides using JDBC directly is `JdbcTemplate` which uses a datasource under the hood.
+
+By convention, we name classes that relate to the persistence layer "repositories" and annotate them with `@Repository` to add them to the context. Our controllers will use "service" classes, which use these repositories, which use this `JdbcTemplate`. This is convention.
+
+The `@Transactional` annotation adds an aspect to the method that wraps the method with the logic for a transaction. If one of the operations in the method throws a runtime exception, and the exception makes it to the aspect (you don't catch the exception, which you shouldn't most of the time), the aspect will rollback the transaction.
+
+# Spring Data
+
+Spring Data is a project that allows you to only write a few lines of code to define the repositories of our Spring app. Spring Data offers a common abstraction layer over different ways of persisting data (e.g. JDBC, ORM frameworks that build on top of JDBC, or even non-relational database drivers like MongoDB's driver).
+
+Spring Data is a high-level layer over the various ways to implement the persistence.
+
+`CrudRepository` is the simplest Spring Data contract (interface) that also provides some persistence capabilities. Don't confuse the `Repository` interface with the aforementioned stereotype annotation `@Repository`.
+
+Here's an example of using Spring Data JDBC:
+
+```java
+public interface AccountRepository
+    extends CrudRepository<Account, Long> {
+    @Query("SELECT * FROM account WHERE name = :name")
+    List<Account> findAccountsByName(String name);
+
+    @Modifying
+    @Query("UPDATE account SET amount = :amount WHERE id = :id")
+    void changeAmount(long id, BigDecimal amount);
+}
+```
+
+Spring Data creates a dynamic implementation of the interface and adds a bean to your app's context when you first need it.
+
+The `@Transactional` annotation can still be used with Spring Data.
+
+# Testing
+
+You can use Mockito to mock dependencies of the class you want to test. You can use `@DisplayName` to further describe the test.
+
+Here's an example:
+
+```java
+public class TransferServiceUnitTests {
+    @Test
+    @DisplayName("Test the amount is transferred " + "from one account to another if no exception occurs.")
+    public void moneyTransferHappyFlow() {
+        AccountRepository accountRepository = mock(AccountRepository.class);
+        TransferService transferService = new TransferService(accountRepository);
+        
+        Account sender = new Account();
+        sender.setId(1);
+        sender.setAmount(new BigDecimal(1000));
+        
+        Account destination = new Account();
+        destination.setId(2);
+        destination.setAmount(new BigDecimal(1000));
+
+        given(accountRepository.findById(sender.getId())).willReturn(Optional.of(sender));
+
+        given(accountRepository.findById(destination.getId())).willReturn(Optional.of(destination));
+
+        transferService.transferMoney(sender.getId(), destination.getId(), new BigDecimal(100));
+
+        verify(accountRepository).changeAmount(1, new BigDecimal(900));
+        verify(accountRepository).changeAmount(2, new BigDecimal(1100));
+    }
+}
+```
+
+The above is an example of white-box testing.
+
+You can also create mocks with Mockito using annotations.
+
+For integration testing, you can use the `@SpringBootTest` annotation on the class, which allows Spring Boot to create a context and add beans as it would in a running app. You can also use the Spring `@MockBean` annotation for mocks if you need mocks (although you'll likely be running an in-memory database, for example, since you're going to want to test the real integration).
+
+To save runtime, the best approach is to rely on unit tests to validate your apps’ components’ logic and use the integration tests only to validate how they integrate with the framework.
+
 # Misc
 
 Spring comes with Tomcat as the default embedded web server.

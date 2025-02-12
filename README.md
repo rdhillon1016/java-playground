@@ -13,10 +13,20 @@ You can have multiple top-level classes in a Java file, but only one `public` cl
 
 # Data Types
 
-- `float`: composed of significand (digits) and an exponent (base 2, tells you where the decimal is).
-- `int`
+- `float`: composed of significand (digits) and an exponent (base 2, tells you where the decimal is). 32-bit single-precision. Always use `BigDecimal` if you need precise values, such as currency
+- `int`: 32-bit signed 2s complement
+- `byte`: 8-bit signed 2s complement
+- `short`: 16-bit signed 2s complement
+- `long`: 64-bit signed 2s complement
+- `double`: double-precision 64-bit float
+- `char`: 16-bit Unicode character
+- `boolean`: data represents one bit of information, but its "size" isn't precisely defined
 
 When an integer overflows, it rolls over to the minimum value and begins counting up from there.
+
+You can represent an unsigned `int` or `long` using the `Integer` or `Long` classes.
+
+`String` objects are immutable. Once created, their values cannot be changed.
 
 # Keywords
 
@@ -28,6 +38,10 @@ When an integer overflows, it rolls over to the minimum value and begins countin
 
 # Interfaces/Abstract Classes
 
+An interface is a reference type, similar to a class, that can contain only constants, method signatures, default methods, static methods (private or public, not protected), instance non-abstract methods (private, not public, not protected), and nested types. Method bodies exist only for default methods, private methods and static methods.
+
+Interfaces can extend other interfaces.
+
 Interfaces form a contract between the class and the outside world, and this contract is enforced at build time by the compiler. If your class claims to implement an interface, all methods defined by that interface must appear in its source code before the class will successfully compile.
 
 Classes can implement multiple interfaces. However, if 2 or more interfaces have a method with the same type signature and name, the implementing class must override that method.
@@ -36,10 +50,114 @@ Abstract classes are partially implemented classes with more of a focus on code 
 
 Composition models a "has-a?" relationship. Class A, instead of extending Class B, instead holds an instance of Class B in its state and uses it, thereby demonstrating the "has-a" relationship.
 
+If a constructor does not explicitly invoke a superclass constructor, the Java compiler automatically inserts a call to the no-argument constructor of the superclass. If the super class does not have a no-argument constructor, you will get a compile-time error. `Object` does have such a constructor, so if `Object` is the only superclass, there is no problem. Constructors in inheritance hierarchies are chained.
+
+A subclass inherits all of the `public` and `protected` members of its parent, no matter what package the subclass is in. If the subclass is in the same package as its parent, it also inherits the package-private (no modifier) members of the parent. A subclass does not inherit the `private` members of its parent class.
+
+A nested class has access to all the private members of its enclosing class—both fields and methods.
+
+Explicit casting like `MountainBike myBike = (MountainBike)obj` will trigger a check at runtime to see if the types match up. You can use the `instanceof` operator to check the types before the cast to make sure a runtime exception won't be thrown.
+
+Multiple inheritance of state isn't allowed, because the object can inherit fields from different superclasses. What if methods or constructors from different superclasses instantiate the same field? Which method or constructor will take precedence? Because interfaces do not contain fields, you do not have to worry about problems that result from multiple inheritance of state.
+
+Multiple inheritance of implementation is the ability to inherit method definitions from multiple classes. Problems arise with this type of multiple inheritance, such as name conflicts and ambiguity. When compilers of programming languages that support this type of multiple inheritance encounter superclasses that contain methods with the same name, they sometimes cannot determine which member or method to access or invoke. In addition, a programmer can unwittingly introduce a name conflict by adding a new method to a superclass. Default methods introduce one form of multiple inheritance of implementation. A class can implement more than one interface, which can contain default methods that have the same name. The Java compiler provides some rules to determine which default method a particular class uses.
+
+The Java programming language supports multiple inheritance of type, which is the ability of a class to implement more than one interface. An object can have multiple types: the type of its own class and the types of all the interfaces that the class implements. This means that if a variable is declared to be the type of an interface, then its value can reference any object that is instantiated from any class that implements the interface. This is discussed in the section Using an Interface as a Type.
+
+As with multiple inheritance of implementation, a class can inherit different implementations of a method defined (as default or static) in the interfaces that it extends. In this case, the compiler or the user must decide which one to use.
+
+`public` and `abstract` keywords are implicit in interfaces.
+
+# Lambdas
+
+The type of a lambda expression must be a functional interface (an interface that has only one `abstract` method, although the complete definition is a little more complex). The `@FunctionalInterface` is to help you make sure your interface is indeed functional, or else the compiler will raise an error.
+
+A functional interface can have any number of default or static methods -- they don't count.
+
+A lambda expression is an implementation of the only abstract method in some functional interface.
+
+You can't capture local variables with lambdas:
+```java
+int calculateTotalPrice(List<Product> products) {
+
+    int totalPrice = 0;
+    Consumer<Product> consumer =
+        product -> totalPrice += product.getPrice();
+    for (Product product: products) {
+        consumer.accept(product);
+    }
+}
+```
+
+The above code, when trying to compile, will raise an error "Variable used in lambda expression should be final or effectively final". Lambdas can only capture values, thus the variable must be immutable.
+
+"Effectively final" refers to the fact that the compiler, when it sees that a variable is read from a lambda and that the variable isn't modified, will add the `final` declaration for you in the bytecode.
+
+# Generics
+
+Generics are also called **parametric polymorphism**. 
+
+You can have truly generic type parameters to methods/classes/interfaces, and you can also have bounded type parameters (restricting the type to be an instance of X interface or abstract class). You can also have multiple bounds.
+
+The point of type variables on generic meethods is to link things together - say, a parameter and return type, or two parameters (but only when at least one is generic). You can also use them to express generic bounds on parameters like `U extends Comparable<? super U>>`.
+
+Generic types can't be primitive types, since at compile-time, all type parameters in generic types are replaced with their bounds or `Object` if the type parameters are unbounded. This is called *type erasure* Primitives don't extend `Object`. 
+
+You can use a wildcard (a question mark) as the type parameter when using a generic, when you don’t know what exactly that type is going to be.
+
+**Variance** is how subtyping between more complex types relate to subtyping between their component types. For example, how should a `List<Cat>` relate to a `List<Animal>`? Or how should a function that returns `Cat` relate to a function that returns `Animal`?
+
+Generic types are not **covariant** (the ordering of types is preserved -- assume "<=" means "is a subtype of" -- If A <= B, then I<A> <= I<B>) by default. For example, you cannot pass a `List<Cat>` where a `List<Animal>` is expected. This is because if this was allowed and you tried to modify that `List<Animal>` that was passed as a `List<Cat>` by adding a `Dog`, that would violate type safety. Arrays *are* covariant, however the same issue as above exists (except in this case it's a runtime exception instead of a compile-time error).
+
+You can modify the aforementioned example to demonstrate a compile-safe, covariant relationship by using a wildcard to impose an upper-bound on the supertype. Instead of writing `List<Animal>`, write `List<? extends Animal>`. This basically says whatever the type of the array elements is, it must be a subclass of animal. You can now safely pass a `List<Cat>` where a `List<? extends Animal>` is expected, demonstrating covariance.
+
+Generic types are also not contravariant by default (the ordering of types is reversed -- If A <= B, then I<A> >= I<B>). For example, you cannot pass a `List<Animal>` where a `List<Cat>` is expected (this is a bit more intuitive). However, it may be useful to express a contravariant relationship. You can do this by using `List<? super Cat>` instead of `List<Cat>`, thereby enforcing a lower bound. Now, you can pass `List<Animal>` where a `List<? super Cat>` is expected.
+
+Bivariance is both contravariance and covariance, while invariance is neither.
+
+"PECS" is a mnemonic. Suppose you want to operate on a type `Thing`. If you are only pulling items from a generic collection, it is a producer and you should use `extends`, since all you care about is that it is a subtype of `Thing` – (covariance). Another way to think about this is that you can’t add anything to the collection, since you don’t know how far below `Thing` in the hierarchy the actual type is. You can however receive things from the collection, since you know it is at least a `Thing` and thus has to be every superclass of `Thing`; if you are only stuffing items in, it is a consumer and you should use `super`, since all you care about is that the list can accept a `Thing` (contravariance). Another way of thinking about this is that you can for sure add `Thing`s and subtypes of `Thing` to the collection, but you can’t receive anything from the Collection, since you have no idea how far above `Thing` in the hierarchy the actual type is (well, you can still receive it as an `Object` since that’s guaranteed to be at the very top of the hierarchy).
+
 # Packages
 
-A package is a namespace that organizes a set of related classes and interfaces.
- 
+A package is a grouping of related types providing access protection and name space management. Note that types refers to classes, interfaces, enumerations, and annotation types. Enumerations and annotation types are special kinds of classes and interfaces, respectively, so types are often referred to in this section simply as classes and interfaces.
+
+By convention, companies use their reversed Internet domain name to begin their package names—for example, com.example.mypackage for a package named mypackage created by a programmer at example.com.
+
+Name collisions that occur within a single company need to be handled by convention within that company, perhaps by including the region or the project name after the company name (for example, com.example.region.mypackage).
+
+Packages in the Java language itself begin with java. or javax.
+
+To use a public package member from outside its package, you must do one of the following:
+- Refer to the member by its fully qualified name
+- Import the package member
+- Import the member's entire package
+
+At first, packages appear to be hierarchical, but they are not. For example, the Java API includes a java.awt package, a java.awt.color package, a java.awt.font package, and many others that begin with java.awt. However, the java.awt.color package, the java.awt.font package, and other java.awt.xxxx packages are not included in the java.awt package. The prefix java.awt (the Java Abstract Window Toolkit) is used for a number of related packages to make the relationship evident, but not to show inclusion.
+
+Importing java.awt.* imports all of the types in the java.awt package, but it does not import java.awt.color, java.awt.font, or any other java.awt.xxxx packages.
+
+There are situations where you need frequent access to static final fields (constants) and static methods from one or two classes. Prefixing the name of these classes over and over can result in cluttered code. The static import statement gives you a way to import the constants and static methods that you want to use so that you do not need to prefix the name of their class.
+
+The path names for a package's source and class files mirror the name of the package.
+
+For convenience, the Java compiler automatically imports two entire packages for each source file:
+1. the java.lang package and
+2. the current package (the package for the current file).
+
+# Annotations
+
+Annotations have a number of uses, among them:
+
+- Information for the compiler — Annotations can be used by the compiler to detect errors or suppress warnings.
+- Compile-time and deployment-time processing -- Software tools can process annotation information to generate code, XML files, and so forth.
+- Runtime processing — Some annotations are available to be examined at runtime.
+
+Annotations can contain named or unnamed elements. Annotations can be applied to declarations: declarations of classes, fields, methods, and other program elements. When used on a declaration, each annotation often appears, by convention, on its own line. Annotations can also be applied to the use of types.
+
+Annotations that apply to other annotations are called meta-annotations.
+- `@Retention` annotation specifies how the marked annotation is stored: at the source level (ignored by the compiler), at the compiler level (ignored by the JVM), or at the JVM level
+- `@Target` marks another annotation to restrict what kind of Java elements the annotaiton can be applied to.
+
 # Exceptions
 
 Unchecked exceptions (ones that extend `RuntimeException`) are exceptions that are not checked for by the compiler. By “checked for”, we mean the compiler doesn’t check to see if it is caught or explicitly thrown by any calling methods. `RuntimeException` is intended to be used for programmer errors. As such it should never be caught, except in rare circumstances.
@@ -86,6 +204,22 @@ The classpath can be supplied to `java` in a number of ways including environmen
 
 Even though a compiler for the Java programming language must only produce class files that satisfy all the static and structural constraints in the previous sections, the Java Virtual Machine has no guarantee that any file it is asked to load was generated by that compiler or is properly formed. Applications such as web browsers do not download source code, which they then compile; these applications download already-compiled class files. The browser needs to determine whether the class file was produced by a trustworthy compiler or by an adversary attempting to exploit the Java Virtual Machine. Because of these potential problems, the Java Virtual Machine needs to verify for itself that the desired constraints are satisfied by the class files it attempts to incorporate. A Java Virtual Machine implementation verifies that each class file satisfies the necessary constraints at linking time.
 
+# Enumerations
+
+In Java, an enum (enumeration) is a special data type used to define a fixed set of constants. Enums are more powerful than simple constants (final static variables) because they can have methods, fields, and constructors.
+
+Enums can implement interfaces.
+
+# Reflection
+
+You can use the `.class` literal to get the `Class` object of a `class`.
+
+Once we have the class, we can find out a lot of information about it, such as who the superclasses are, what public members it has, what interfaces it has implemented. If it is a sealed type, we can even find the subtypes. This is like looking in the mirror to see what you contain.
+
+You can try to find and invoke a method at runtime. The only part that waiss a bit dangerous is that we do not have a compiler check that these methods exist and are accessible. So far, this has been shallow reflective access.
+
+Deep reflective access allows you to look more deeply into the mirror. More specifically, it allows you to do things like change access modifiers in classes.
+
 # Advanced
 
 ## Meta
@@ -122,6 +256,12 @@ Java EE (now Jakarta EE) is a set of specifications and APIs for building enterp
 
 Java EE was originally maintained by Oracle, but it was submitted to the Eclipse Foundation. Oracle owens the trademark for the names `Java` and `javax`, so Java EE was renamed to Jakarta EE.
 
+Servlet is a Java EE specification. An HTTP servlet container implements the Servlet specification and translates HTTP requests and responses to a Java app. A servlet itself is nothing more than a Java object corresponding to a set of routes that gets fed to the servlet container. When the container gets an HTTP request to one of those routes, it calls a servlet object's method and provides the HTTP request object and a modifiable HTTP reponse object as parameters. The servlet object then does some work. After that is done, the container then reads the HTTP response object and sends the response to the client.
+
 ## Misc
 
 Java [does not have tail call optimization](https://softwareengineering.stackexchange.com/a/216848).
+
+In software engineering, a WAR file is a file used to distribute a collection of JAR-files, JavaServer Pages, Java Servlets, Java classes, XML files, tag libraries, static web pages (HTML and related files) and other resources that together constitute a web application. This file is provided to an application server like Tomcat.
+
+You can use method references in place of functional interfaces like `Arrays.sort(rosterAsArray, Person::compareByAge);` (`Person::compareByAge` is the method reference).
