@@ -210,6 +210,62 @@ In Java, an enum (enumeration) is a special data type used to define a fixed set
 
 Enums can implement interfaces.
 
+# Synchronization
+
+Thread interference happens when two operations, running in different threads, but acting on the same data, interleave.
+
+Simple statements can translate to multiple steps by the virtual machine. We won't examine the specific steps the virtual machine takes — it is enough to know that the single expression `c++` can be decomposed into three steps:
+
+1. Retrieve the current value of c.
+2. Increment the retrieved value by 1.
+3. Store the incremented value back in c.
+
+Suppose Thread A invokes `increment` at about the same time Thread B invokes `decrement`. If the initial value of `c` is 0, their interleaved actions might follow this sequence:
+
+1. Thread A: Retrieve c.
+2. Thread B: Retrieve c.
+3. Thread A: Increment retrieved value; result is 1.
+4. Thread B: Decrement retrieved value; result is -1.
+5. Thread A: Store result in c; c is now 1.
+6. Thread B: Store result in c; c is now -1.
+
+Thread A's result is lost, overwritten by Thread B. This particular interleaving is only one possibility. Under different circumstances it might be Thread B's result that gets lost, or there could be no error at all. Because they are unpredictable, thread interference bugs can be difficult to detect and fix.
+
+It is not possible for two invocations of `synchronized` methods on the same object to interleave. When one thread is executing a `synchronized` method for an object, all other threads that invoke `synchronized` methods for the same object block (suspend execution) until the first thread is done with the object. This strategy is effective, but can present problems with liveness.
+
+Synchronization is built around an internal entity known as the *intrinsic lock*. Every object has one.
+
+You can use synchronized statements to avoid synchronizing invocations of other objects' methods (which can create liveness problems):
+```java
+public void addName(String name) {
+    synchronized(this) {
+        lastName = name;
+        nameCount++;
+    }
+    nameList.add(name);
+}
+```
+
+You don't need to worry about thread interference on operations that are atomic.
+
+- Reads and writes are atomic for reference variables and for most primitive variables (all types except `long` and `double`).
+- Reads and writes are atomic for all variables declared `volatile` (including `long` and `double` variables).
+
+However, this does not eliminate all need to synchronize atomic actions, because [memory consistency errors](https://docs.oracle.com/javase/tutorial/essential/concurrency/memconsist.html) (threads having inconsistent views of the state) are still possible. 
+
+Using `volatile` variables reduces the risk of memory consistency errors, because any write to a `volatile` variable establishes a happens-before relationship with subsequent reads of that same variable.
+
+Some liveness (the ability for a program to make meaningful progress) problems include deadlock (2 threads waiting on locks held by each other), starvation (greedy threads), and livelocks (2 threads are too busy reacting to each other to make progress).
+
+Immutable objects are particularly useful in concurrent applications. Since they cannot change state, they cannot be corrupted by thread interference or observed in an inconsistent state.
+
+There are some higher-level concurrency objects you can use too:
+- `Lock` objects work very much like the implicit locks used by synchronized code. As with implicit locks, only one thread can own a Lock object at a time. `Lock` objects also support a wait/notify mechanism, through their associated `Condition` objects. The biggest advantage of `Lock` objects over implicit locks is their ability to back out of an attempt to acquire a lock. The `tryLock` method backs out if the lock is not available immediately or before a timeout expires (if specified). The `lockInterruptibly` method backs out if another thread sends an interrupt before the lock is acquired.
+- In large-scale applications, it makes sense to separate thread management and creation from the rest of the application. Objects that encapsulate these functions are known as *executors*. Most of the executor implementations in `java.util.concurrent` use thread pools, which consist of worker threads. Using worker threads minimizes the overhead due to thread creation. Thread objects use a significant amount of memory, and in a large-scale application, allocating and deallocating many thread objects creates a significant memory management overhead.
+- As with any ExecutorService implementation, the *fork/join* framework distributes tasks to worker threads in a thread pool. The fork/join framework is distinct because it uses a work-stealing algorithm. Worker threads that run out of things to do can steal tasks from other threads that are still busy.
+- The `java.util.concurrent.atomic` package defines classes that support atomic operations on single variables.
+- The `java.util.concurrent` package includes a number of additions to the Java Collections Framework that are handy for concurrency, like `BlockingQueue`.
+
 # Reflection
 
 You can use the `.class` literal to get the `Class` object of a `class`.
