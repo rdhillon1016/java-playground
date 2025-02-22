@@ -105,6 +105,8 @@ Lazy instantiation means Spring creates the instance the first time someone refe
 
 **Prototype-scoped** beans means Spring creates a new object instance for each request for that bean. Use the `@Scope` annotation to change the bean's scope. This is useful to prevent race conditions on singleton beans, although you could just not use the Spring context and just instantiate an instance of that class yourself (as long as the instance doesn't itself need any beans). In general, in any case where we want Spring to augment the object with a specific capability, like dependency injection, it needs to be a bean.
 
+As a rule, you should use the prototype scope for all stateful beans and the singleton scope for stateless beans.
+
 Here's an example where using a prototype-scoped bean is useful (assume that the CommentProcessor has mutable state):
 ```java
 @Component
@@ -132,6 +134,22 @@ public class CommentService {
 ```
 
 Note how, in that example, we didn't injent the `CommentProcessor` directly in the `CommentService` bean. Since `CommentService` bean is a singleton, it will only be instantiated once by the context, and thus you'll end up with only one injected instance of `CommentProcessor`. Each call of `sendComment()` will use this unique instance.
+
+However, this is bad since the `CommentService` bean has to be aware of the Spring context. Another way to grab a prototype-scoped bean is to use [lookup method injection](https://docs.spring.io/spring-framework/reference/core/beans/dependencies/factory-method-injection.html):
+```java
+public abstract class CommandManager {
+
+	public Object process(Object commandState) {
+		Command command = createCommand();
+		command.setState(commandState);
+		return command.execute();
+	}
+
+	@Lookup
+	protected abstract Command createCommand();
+}
+```
+while making sure that the `Command` bean is prototype-scoped.
 
 # Spring AOP
 
