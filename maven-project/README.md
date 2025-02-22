@@ -6,6 +6,8 @@ In Maven, an **archetype** is a template of a project which is combined with som
 
 The **POM** contains every important piece of information about your project and is essentially one-stop-shopping for finding anything related to your project.
 
+Every artifact in Maven must be identifiable through a unique combination of three identifiers: `groupId`, `artifactId`, and `version`. Each `groupId` should follow Java's package name rules. This means it starts with a reversed domain name you control. There are many legacy projects that do not follow this convention and instead use single word group IDs. However, it will be difficult to get a new single word group ID approved for inclusion in the Maven Central repository. You can create as many subgroups as you want.
+
 ## Lifecycle
 
 Maven is based around the central concept of a build lifecycle.
@@ -63,9 +65,38 @@ Maven allows you to use both your own (via `<properties>`) and pre-defined varia
 
 ## Dependencies
 
-Every artifact in Maven must be identifiable through a unique combination of three identifiers: `groupId`, `artifactId`, and `version`. Each `groupId` should follow Java's package name rules. This means it starts with a reversed domain name you control. There are many legacy projects that do not follow this convention and instead use single word group IDs. However, it will be difficult to get a new single word group ID approved for inclusion in the Maven Central repository. You can create as many subgroups as you want.
+Where does Maven reference depencies from? Your local repository. When it builds a project, it makes sure to install the dependencies, including transitive and inherited dependencies in your local maven repository.
+
+With transitive dependencies, the graph of included libraries can quickly grow quite large. For this reason, there are additional features that limit which dependencies are included:
+- Dependency mediation - this determines what version of an artifact will be chosen when multiple versions are encountered as dependencies. Maven picks the "nearest definition". That is, it uses the version of the closest dependency to your project in the tree of dependencies. You can always guarantee a version by declaring it explicitly in your project's POM. Since versions are arbitrary strings and may not follow a strict semantic sequence, Maven can't just choose the newest version.
+- Dependency management - this allows project authors to directly specify the versions of artifacts to be used when they are encountered in transitive dependencies or in dependencies where no version has been specified.
+- Dependency scope - this allows you to only include dependencies appropriate for the current stage of the build.
+- Excluded dependencies - If project X depends on project Y, and project Y depends on project Z, the owner of project X can explicitly exclude project Z as a dependency, using the "exclusion" element.
+- Optional dependencies - If project Y depends on project Z, the owner of project Y can mark project Z as an optional dependency, using the "optional" element. When project X depends on project Y, X will depend only on Y and not on Y's optional dependency Z. The owner of project X may then explicitly add a dependency on Z, at her option. (It may be helpful to think of optional dependencies as "excluded by default.")
+
+Dependency management takes precedence over dependency mediation for transitive dependencies. The dependency management won't affect the (transitive) dependencies of any plugins used in the same effective POM but only the (transitive) project dependencies.
+
+Note that using 2 versions of the same dependency in your project will cause all sorts of problems. Remember that JAR versioning is basically meaningless to the compiler and the runtime -- a JAR is just a place for the compiler or the runtime to look for bytecode. So if you have 2 JARs, with different versions, but containing the same classes, the classloader will have two places it can find such classes, potentially causing issues if a component in your program relies on a certain version of the class, but is given the wrong one. This could potentially work if you have two classloaders, each loading a separate version, but this is highly uncommon.
 
 Dependencies have scope (most dependencies are needed at compile-time to compile your source -- e.g. to make sure your code is type-safe). Some dependencies may only be needed at runtime (e.g. a JDBC driver).
 
-Where does Maven reference depencies from? Your local repository. When it builds a project, it makes sure to install the dependencies in your local maven repository.
+Although transitive dependencies can implicitly include desired dependencies, it is a good practice to explicitly specify the dependencies your source code uses directly. This best practice proves its value especially when the dependencies of your project change their dependencies. For example, assume that your project A specifies a dependency on another project B, and project B specifies a dependency on project C. If you are directly using components in project C, and you don't specify project C in your project A, it may cause build failure when project B suddenly updates/removes its dependency on project C. Another reason to directly specify dependencies is that it provides better documentation for your project: one can learn more information by just reading the POM file in your project, or by executing `mvn dependency:tree`. Maven also provides `dependency:analyze` plugin goal for analyzing the dependencies.
+
+The scope of your dependencies [affects the scope of transitive dependencies](https://maven.apache.org/guides/introduction/introduction-to-dependency-mechanism.html) in your projects.
+
+The examples in the previous section describe how to specify managed dependencies through inheritance. However, in larger projects it may be impossible to accomplish this since a project can only inherit from a single parent. To accommodate this, projects can import managed dependencies from other projects. This is accomplished by declaring a POM artifact as a dependency with a scope of "import".
+
+Optional dependencies are used when it's not possible (for whatever reason) to split a project into sub-modules. The idea is that some of the dependencies are only used for certain features in the project and will not be needed if that feature isn't used. Ideally, such a feature would be split into a sub-module that depends on the core functionality project. This new subproject would have only non-optional dependencies, since you'd need them all if you decided to use the subproject's functionality.
+
+A bill of materials POM (a BOM) is a POM with a dependency management section that lists dependencies with versions that play nicely with each other. Other projects that wish to use the library of artifacts specified in the BOM POM should import this POM into the dependencyManagement section of their POM.
+
+## Profiles
+
+Under certain conditions, plugins may need to be configured with local filesystem paths. Under other circumstances, a slightly different dependency set will be required, and the project's artifact name may need to be adjusted slightly. And at still other times, you may even need to include a whole plugin in the build lifecycle depending on the detected build environment.
+
+To address these circumstances, Maven supports build profiles.
+
+## Directory Layout
+
+Maven has a [standard directory layout](https://maven.apache.org/guides/introduction/introduction-to-the-standard-directory-layout.html).
 
