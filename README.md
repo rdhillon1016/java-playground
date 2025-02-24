@@ -107,11 +107,11 @@ You can use a wildcard (a question mark) as the type parameter when using a gene
 
 **Variance** is how subtyping between more complex types relate to subtyping between their component types. For example, how should a `List<Cat>` relate to a `List<Animal>`? Or how should a function that returns `Cat` relate to a function that returns `Animal`?
 
-Generic types are not **covariant** (the ordering of types is preserved -- assume "<=" means "is a subtype of" -- If A <= B, then I<A> <= I<B>) by default. For example, you cannot pass a `List<Cat>` where a `List<Animal>` is expected. This is because if this was allowed and you tried to modify that `List<Animal>` that was passed as a `List<Cat>` by adding a `Dog`, that would violate type safety. Arrays *are* covariant, however the same issue as above exists (except in this case it's a runtime exception instead of a compile-time error).
+Generic types are not **covariant** (the ordering of types is preserved -- assume "<=" means "is a subtype of" -- If A <= B, then I\<A\> <= I\<B\>) by default. For example, you cannot pass a `List<Cat>` where a `List<Animal>` is expected. This is because if this was allowed and you tried to modify that `List<Animal>` that was passed as a `List<Cat>` by adding a `Dog`, that would violate type safety. Arrays *are* covariant, however the same issue as above exists (except in this case it's a runtime exception instead of a compile-time error).
 
 You can modify the aforementioned example to demonstrate a compile-safe, covariant relationship by using a wildcard to impose an upper-bound on the supertype. Instead of writing `List<Animal>`, write `List<? extends Animal>`. This basically says whatever the type of the array elements is, it must be a subclass of animal. You can now safely pass a `List<Cat>` where a `List<? extends Animal>` is expected, demonstrating covariance.
 
-Generic types are also not contravariant by default (the ordering of types is reversed -- If A <= B, then I<A> >= I<B>). For example, you cannot pass a `List<Animal>` where a `List<Cat>` is expected (this is a bit more intuitive). However, it may be useful to express a contravariant relationship. You can do this by using `List<? super Cat>` instead of `List<Cat>`, thereby enforcing a lower bound. Now, you can pass `List<Animal>` where a `List<? super Cat>` is expected.
+Generic types are also not contravariant by default (the ordering of types is reversed -- If A <= B, then I\<\A> >= I\<B\>). For example, you cannot pass a `List<Animal>` where a `List<Cat>` is expected (this is a bit more intuitive). However, it may be useful to express a contravariant relationship. You can do this by using `List<? super Cat>` instead of `List<Cat>`, thereby enforcing a lower bound. Now, you can pass `List<Animal>` where a `List<? super Cat>` is expected.
 
 Bivariance is both contravariance and covariance, while invariance is neither.
 
@@ -335,3 +335,11 @@ Java [does not have tail call optimization](https://softwareengineering.stackexc
 In software engineering, a WAR file is a file used to distribute a collection of JAR-files, JavaServer Pages, Java Servlets, Java classes, XML files, tag libraries, static web pages (HTML and related files) and other resources that together constitute a web application. This file is provided to an application server like Tomcat.
 
 You can use method references in place of functional interfaces like `Arrays.sort(rosterAsArray, Person::compareByAge);` (`Person::compareByAge` is the method reference).
+
+## JDBC
+
+Note that on a JDBC connection, you can start a transaction with `connection.setAutoCommit(false);`. Additionally, you can [set the isolation level](https://docs.oracle.com/javase/tutorial/jdbc/basics/transactions.html) of the transaction with `connection.setTransactionIsolation(Connection.TRANSACTION_READ_UNCOMMITTED);`.
+
+Note that if a DBMS doesn't support the isolation level specified, it will go with a higher, more restrictive isolation level. If it can't do that, then the driver will throw a SQLException. If you don't specify an isolation level, it will go with the DBMS default.
+
+An isolation level of a transaction A determines whether it can, for example, make or allow dirty reads from rows that other transactions are operating on. Other types of reads that are allowed/disallowed in certain isolation levels are nonrepeatable reads and phantom reads. In a nutshell, different isolation levels are implemented with locking algorithms of varying aggression.

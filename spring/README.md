@@ -64,7 +64,7 @@ You can express relationships between beans in two ways:
   ```
   - Auto-wiring: Using the `@Autowired` annotation, we mark an object’s property where we want Spring to inject a value from the context.
 
-  You can autowire a field (which can be bad in case you want the field to be `final` or you want to manage the value yourself at initialization) or the constructor of the class (the parameters will then be autowired).
+  You can autowire a field (which can be bad in case you want the field to be `final` or you want to manage the value yourself at initialization) or the constructor of the `@Component` class (the parameters will then be autowired). If a class has no or only one non-default constructor, `@Autowired` is optional.
 
   The possibility to set the values when calling the constructor also helps you when writing specific unit tests where you don’t want to rely on Spring making the field injection for you.
 
@@ -75,7 +75,7 @@ Circular dependencies between beans should be avoided as they are an anti-patter
 If Spring needs to inject a value that has multiple beans of the same type to choose from, it tries the following:
 1. If the identifier of the parameter/field that needs to be injected matches the name of a bean, it chooses that one.
 2. It checks for a primary bean.
-3. It checks if you explicitly selected a bean using the `@Qualifier` annotation.
+3. It checks if you explicitly selected a bean by id using the `@Qualifier` annotation.
 
 Otherwise, it will fail.
 
@@ -271,6 +271,8 @@ Alternatively, you can use a REST controller advice to intercept exceptions and 
 
 Use the `@RequestBody` annotation on a parameter of the controller's action to denote that the request body (Spring assumes that this will be in JSON by default) should be deserialized into an object of that type.
 
+You can use `@JdbcTest` to auto configure a test database and to only enable auto-configuration that is relevant to JDBC tests.
+
 # REST Clients
 
 There are 3 REST clients that you can use from a Spring app (although `RestTemplate` will soon be deprecated):
@@ -287,7 +289,21 @@ One choice as a tool for working with a relational database besides using JDBC d
 
 By convention, we name classes that relate to the persistence layer "repositories" and annotate them with `@Repository` to add them to the context. Our controllers will use "service" classes, which use these repositories, which use this `JdbcTemplate`. This is convention.
 
-The `@Transactional` annotation adds an aspect to the method that wraps the method with the logic for a transaction. If one of the operations in the method throws a runtime exception, and the exception makes it to the aspect (you don't catch the exception, which you shouldn't most of the time), the aspect will rollback the transaction.
+The `@Transactional` annotation adds an aspect to the method that wraps the method with the logic for a transaction. If one of the operations in the method throws a runtime exception, and the exception makes it to the aspect (you don't catch the exception, which you shouldn't most of the time), the aspect will rollback the transaction. To enable transactions, you need to:
+- Declare a `PlatformTransactionManager` bean (this is a Spring interface). There are multiple implementations of this transaction manager. The one used for JDBC is `DataSourceTransactionManager`.
+- Declare the transactional methods (using the `@Transactional` annotation).
+- Add `@EnableTransactionManagement` to a configuration class. This will define a bean post-processor that proxies transactional beans and makes sure a transaction is started and committed around transactional methods. Note that the default behaviour is that checked exceptions do not cause rollback, but runtime exceptions do. Any database accesses in the transactional methods will make sure to use the connection started by the proxy, as that connection is thread-bound.
+
+If one transactional method calls another, you can customize whether you want it to use the same transaction that was started in the first method, or to use a separate one. These are called transaction propagation levels. An example is the following:
+```java
+@Transactional(propagation=Propagation.REQUIRES_NEW)
+```
+
+However, since propagation rules are enforced by a proxy, if the 2 methods reside in the same class, the rule doesn't apply and the transactional methods will use the same transaction because of the thread-bound connection.
+
+You can annotate a class with `@Transactional` if you want each method to be a transaction.
+
+You can set the transaction isolation level on the `@Transactional` annotation.
 
 `JdbcTemplate`s require that you define the mapping from a result set to a domain object, and thus doesn't provide easy object-relational mapping.
 
@@ -360,6 +376,8 @@ For integration testing, you can use the `@SpringBootTest` annotation on the cla
 To save runtime, the best approach is to rely on unit tests to validate your apps’ components’ logic and use the integration tests only to validate how they integrate with the framework.
 
 Profiles are one strategy you can use to prevent certain beans (like JDBC repository classes) from being instantiated so that you can replace them with stub beans.
+
+You can write `@Test @Transactional` for transactional test methods. Note that these will always get rolled back at the end of the method, so need to clean up your database.
 
 # Misc
 
