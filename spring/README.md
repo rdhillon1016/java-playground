@@ -155,23 +155,20 @@ while making sure that the `Command` bean is prototype-scoped.
 
 Aspects are a way the framework intercepts method calls and possibly alters the execution of methods. For example, sometimes it’s not relevant to have parts of the code (like logging and tracing) in the same place with the business logic because it makes the app more difficult to understand.
 
+More generally, aspects intercept "join points" (a point in the execution of a program). Aspects define "pointcuts", which specify the join points at which the "advice" (the code to execute at the point of interception) is executed.
+
 Aspects are used by Spring is implementing transactionality (for data consistency) and security features, just to name a couple.
 
 An aspect is simply a piece of logic the framework executes when you call specific methods of your choice.
 
-When designing the aspect, you define the following:
-- *What* code you want Spring to execute when you call specific methods.
-- *When* the app should execute this logic of the aspect (e.g before the method call). This is named the **advice**.
-- Which methods the framework needs to intercept and execute the aspect for them. This is named the **pointcut**.
-
-There is also the concept of a **join point** in aspect-oriented programming, which defines the event that triggers the execution of an aspect. But with Spring, this is always a method call.
+You must define a few things in an aspect. First, there is the concept of a **join point** in aspect-oriented programming, which defines the event that triggers the execution of an aspect. But with Spring, this is always a method call. A **pointcut** expression defines which methods the framework needs to intercept and execute the aspect for them, and you'll need to define this in your aspect. You'll also need to define the code that is executed at a particular join point (i.e the advice). Different types of advice include "around", "before", and "after" advice (i.e the code that executes around, before, or after a join point).
 
 Objects that use aspects need to be added to the Spring context. The bean that declares the method intercepted by an aspect is named the **target object**.
 
-When an object is an aspect target and you request it from the context, Spring doesn't give you the actual object. It gives you a *proxy* object. When a method is invoked on the proxy object, it calls the aspect logic and then delegates to the actual object's method. This is called **weaving**.
+When an object is an aspect target and you request it from the context, Spring doesn't give you the actual object. It gives you a *proxy* object. When a method is invoked on the proxy object, it calls the aspect logic and then delegates to the actual object's method. This is called **weaving**. Proxies are created by `BeanPostProcessor`s.
 
 You create an aspect by:
-1. Annotating the configuration class with `@EnableAspectJAutoProxy`.
+1. Annotating the configuration class with `@EnableAspectJAutoProxy` (this allows you to use AspectJ classes and notation to define your Spring aspects). This is autoconfigured in Spring Boot.
 2. Create a new class, annotated with `@Aspect`. Add a bean for it to the Spring context.
 3. Define and implement a method that will implement the aspect logic and tell Spring when and which methods to intercept using an advice annotation:
     ```java
@@ -199,6 +196,29 @@ public @interface ToLog {
 and then use it in the aspect pointcut expression like `@Around("@annotation(ToLog)")`.
 
 By default, Spring doesn’t guarantee the order in which two aspects in the same execution chain are called. If you need to define the aspects' execution order, use the `@Order` annotation which receives an ordinal.
+
+There are limitations to Spring Aspects vs AspectJ:
+- AspectJ aspects are weaved in at load-time, while Spring aspects are dynamically generated subclasses that delegate to the super class after executing the advice.
+- Spring aspects can only advice non-private methods
+- Spring aspects only apply to Spring Beans
+- Suppose method `a()` calls method `b()` on the same class/interface. Then, the advice will never be executed for method `b()`, since Spring AOP weaves with proxies.
+
+Spring does allow you to use AspectJ classes and notation to define your Spring Aspects, however.
+
+Take this example of annotating an advice method using AspectJ's pointcut expression language:
+```java
+@Before("execution(* rewards.internal.*.*Repository.find*(..))")
+```
+
+The "execution" specifies that the join point will be a method. The first asterisk says that the method can return anything. The class should be anywhere in a package that starts with `rewards.internal`. The class name should end with `Repository`. The method should start with `find`, and it can take zero or more arguments.
+
+To grab something like an exception or a return value and use it in your advice, you can do something like:
+```java
+@AfterThrowing(value = "execution(* rewards.internal.*.*Repository.find*(..))", throwing = "e")
+public void something(SomeSpecificException e)
+```
+
+This will make sure that the advice only executes if the exception thrown is of type `SomeSpecificException`. You could do this in the pointcut expression itself by using the fully qualified class name of the exception, but doing it this way allows to capture it and use it. Use `returning` rather than `throwing` if you need a return value of a successfully returned method.
 
 # Spring Boot
 
@@ -269,6 +289,8 @@ By convention, we name classes that relate to the persistence layer "repositorie
 
 The `@Transactional` annotation adds an aspect to the method that wraps the method with the logic for a transaction. If one of the operations in the method throws a runtime exception, and the exception makes it to the aspect (you don't catch the exception, which you shouldn't most of the time), the aspect will rollback the transaction.
 
+`JdbcTemplate`s require that you define the mapping from a result set to a domain object, and thus doesn't provide easy object-relational mapping.
+
 # Spring Data
 
 Spring Data is a project that allows you to only write a few lines of code to define the repositories of our Spring app. Spring Data offers a common abstraction layer over different ways of persisting data (e.g. JDBC, ORM frameworks that build on top of JDBC, or even non-relational database drivers like MongoDB's driver).
@@ -336,6 +358,8 @@ You can also create mocks with Mockito using annotations.
 For integration testing, you can use the `@SpringBootTest` annotation on the class, which allows Spring Boot to create a context and add beans as it would in a running app. You can also use the Spring `@MockBean` annotation for mocks if you need mocks (although you'll likely be running an in-memory database, for example, since you're going to want to test the real integration).
 
 To save runtime, the best approach is to rely on unit tests to validate your apps’ components’ logic and use the integration tests only to validate how they integrate with the framework.
+
+Profiles are one strategy you can use to prevent certain beans (like JDBC repository classes) from being instantiated so that you can replace them with stub beans.
 
 # Misc
 

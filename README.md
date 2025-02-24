@@ -276,6 +276,20 @@ You can try to find and invoke a method at runtime. The only part that waiss a b
 
 Deep reflective access allows you to look more deeply into the mirror. More specifically, it allows you to do things like change access modifiers in classes.
 
+# JUnit 5
+
+Components:
+- JUnit Platform (the testing engine)
+- JUnit Jupiter (the API that you'll use to write tests). Note how it's the 5th planet of the solar system.
+- JUnit Vintage (an engine for running JUnit 3 and 4 tests on the platform)
+
+Some annotations of JUnit 5:
+- `@BeforeEach`
+- `@BeforeAll`
+- `@AfterEach`
+- `@AfterAll`
+- `@Disabled`
+
 # Advanced
 
 ## Meta
