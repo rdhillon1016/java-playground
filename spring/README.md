@@ -10,10 +10,6 @@ A framework often requires inversion of control, is opinionated, and comprehensi
 
 On the other hand, with a library, you control the flow.
 
-## Spring Boot
-
-Spring Boot is a project part of the Spring ecosystem that introduces the concept of “convention over configuration.” The main idea of this concept is that instead of setting up all the configurations of a framework yourself, Spring Boot offers you a default configuration that you can customize as needed.
-
 # Spring Context
 
 Object instances managed by the "Spring context" are called **beans**.
@@ -220,59 +216,6 @@ public void something(SomeSpecificException e)
 
 This will make sure that the advice only executes if the exception thrown is of type `SomeSpecificException`. You could do this in the pointcut expression itself by using the fully qualified class name of the exception, but doing it this way allows to capture it and use it. Use `returning` rather than `throwing` if you need a return value of a successfully returned method.
 
-# Spring Boot
-
-A servlet container is the entrypoint and exit point for HTTP requests in a Spring Boot app. Spring uses a servlet instance under the hood for requests.
-
-Spring Boot offers:
-- Simplified project creation: You can use a project initialization service to get an empty but configured skeleton app.
-- Dependency starters. You don't have to worry about version compatibility or which dependencies you need for one particular purpose.
-- Autoconfiguration based on dependencies. You only need to change the configurations provided by Spring Boot that don't match what you need.
-
-A Spring Boot projected generated with Spring Initializr usually contains the following:
-- The app's main class annotated with `@SpringBootApplication`.
-- The artifact `spring-boot-starter-parent` as a parent in the `pom.xml`. This provides compatible versions for dependencies you'll add to your project.
-- The plugin `spring-boot-maven-plugin` which is responsible for adding part of the default configurations you'll observe in your project.
-- Dependencies that you specify.
-- An `application.properties` file.
-
-Dependency starters are capability-oriented groups of compatible dependencies. `spring-boot-starter-web` includes dependencies like Tomcat, context, and AOP.
-
-A controller is a component of the Spring Boot web app that contains methods executed for a specific HTTP request. It is annotated with `@Controller` (another stereotype annotation).
-
-```java
-@Controller
-public class MainController {
-    @RequestMapping("/home")
-    public String home() {
-        return "home.html";
-    }
-}
-```
-
-The anatomy of an HTTP request to a Spring Boot app using Spring MVC is something like this:
-1. Client makes request.
-2. Tomcat gets the request. It calls a servlet component for the request. In the case of Spring MVC, Tomcat called a servlet Spring Boot configured called a *dispatcher servlet*.
-3. The dispatcher servlet (also known as a *front controller*) finds what controller action to call for the request by delegating to a component named *handler mapping*.
-4. The dispatcher servlet calls that specific controller action.
-5. The controller does stuff, and returns the page name it needs to render for the response (i.e the view) to the servlet.
-6. The dispatcher servlet delegates to the view resolver to find the view, and returns the rendered view in the response.
-
-In web apps, you can use other bean scopes that are relevant only to web applications:
-- Request scope. An instance for every HTTP request.
-- Session scope. An instance for every HTTP session.
-- Application scope. A unique instance in the app's context.  The application scope is close to how a singleton works. The difference is that you can’t have more instances of the same type in the context.
-
-For REST services, we tell the dispatcher servlet not to look for a view. Use the `@RestController` annotation rather than `@Controller`. By default, responses are serialized to JSON when you return an object.
-
-If you want to customize the HTTP response, you can return a `ResponseEntity<T>` object. You can also catch exceptions in the controller and modify the `ResponseEntity` accordingly.
-
-Alternatively, you can use a REST controller advice to intercept exceptions and apply custom logic to handle the error case. The controller can focus on the happy case. Use the `@RestControllerAdvice` annotation.
-
-Use the `@RequestBody` annotation on a parameter of the controller's action to denote that the request body (Spring assumes that this will be in JSON by default) should be deserialized into an object of that type.
-
-You can use `@JdbcTest` to auto configure a test database and to only enable auto-configuration that is relevant to JDBC tests.
-
 # REST Clients
 
 There are 3 REST clients that you can use from a Spring app (although `RestTemplate` will soon be deprecated):
@@ -378,7 +321,3 @@ To save runtime, the best approach is to rely on unit tests to validate your app
 Profiles are one strategy you can use to prevent certain beans (like JDBC repository classes) from being instantiated so that you can replace them with stub beans.
 
 You can write `@Test @Transactional` for transactional test methods. Note that these will always get rolled back at the end of the method, so need to clean up your database.
-
-# Misc
-
-Spring comes with Tomcat as the default embedded web server.
