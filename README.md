@@ -11,6 +11,8 @@ public class MyFirstClass {
 
 You can have multiple top-level classes in a Java file, but only one `public` class.
 
+A resource is an object that must be closed after the program is finished with it. The try-with-resources statement ensures that each resource is closed at the end of the statement. Any object that implements java.lang.AutoCloseable, which includes all objects which implement java.io.Closeable, can be used as a resource.
+
 # Data Types
 
 - `float`: composed of significand (digits) and an exponent (base 2, tells you where the decimal is). 32-bit single-precision. Always use `BigDecimal` if you need precise values, such as currency
@@ -335,6 +337,10 @@ Java [does not have tail call optimization](https://softwareengineering.stackexc
 In software engineering, a WAR file is a file used to distribute a collection of JAR-files, JavaServer Pages, Java Servlets, Java classes, XML files, tag libraries, static web pages (HTML and related files) and other resources that together constitute a web application. This file is provided to an application server like Tomcat.
 
 You can use method references in place of functional interfaces like `Arrays.sort(rosterAsArray, Person::compareByAge);` (`Person::compareByAge` is the method reference).
+
+The [Stream API](https://dev.java/learn/api/streams/) is your best tool to process your in-memory data following a map/filter/reduce approach.
+
+System properties are properties provided to the process at runtime.
 
 ## JDBC
 
