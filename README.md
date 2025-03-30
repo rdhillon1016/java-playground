@@ -380,6 +380,97 @@ Note that Oracle owns a lot of the copyright associated with Java and its APIs.
 
 See [https://dev.java/evolution/](https://dev.java/evolution/).
 
+## Security using JDK
+
+The Java Cryptography Architecture (JCA) is the framework for working with cryptography using the Java programming language and is part of the Java Security API. Its goals are to offer cryptography algorithm independence and extensibility, interoperability, and an implementation agnostic from security providers.
+
+The JCA encompasses engine classes that interact with a specific type of cryptographic service via:
+
+* cryptographic operations like encryption, digital signatures, message digests, etc.
+* keys and algorithm parameters
+* keystores or certificates that encapsulate the cryptographic data and can be used at higher layers of abstraction.
+
+To use the JCA, an application requests a particular type of object (such as a `MessageDigest`) and a particular algorithm or service (such as the SHA-256 algorithm) and gets an implementation from one of the installed providers. Or you can request the objects from a specific provider (such as `ProviderC`).
+
+Some popular provider examples include: `SunPKCS11`, `SunMSCAPI (Windows)`, `BouncyCastle`, `RSA JSAFE`, `SafeNet`. If the provider you would like to use is not among the list printed, you can also register it following the steps below:
+
+1. Place provider classes on CLASSPATH.
+2. Register the provider either:
+  - Statically by modifying the conf/security/java.security configuration file, e.g. `security.provider.5=SunJCEII`. Be aware that in JDK 8 the `java.security` file is in java.home/lib/security/java.security.
+  - Dynamically by invoking `Security.addProvider(java.security.Provider)` and `Security.insertProviderAt(java.security.Provider,int)`.
+3. The preference order for a provider is declared via simple number ordering.
+
+When working with data encryption, you can use this security control mechanism to protect three types of data states:
+
+* **Data at rest** is information not actively moving between devices or networks, stored in a database, or kept on a disk.
+* **Data in motion** represents information traveling from one network point to another.
+* **Data in use** refers to information loaded in memory actively accessed and processed by users.
+
+## Virtual Threads
+
+After a series of experiments with different APIs, the designers of Java virtual threads decided to simply reuse the familiar `Thread` API. A virtual thread is an instance of `Thread`. Many virtual threads can run on a single OS thread, avoiding the CPU and memory overhead of starting a bunch of OS threads that are likely to block. Usually, the number of OS threads is the same as the number of CPU cores. This is much like Go's concurrency system. Cancellation works the same way as for platform threads, by calling `interrupt`.
+
+Note that there is no way to find the platform thread on which a virtual thread executes.
+
+Here's an example:
+```java
+import java.util.concurrent.*;
+import java.net.*;
+import java.net.http.*;
+
+public class VirtualThreadDemo {
+   public static void main(String[] args) throws InterruptedException, ExecutionException {
+      ExecutorService service = Executors.newVirtualThreadPerTaskExecutor();
+      Future<String> f1 = service.submit(() -> get("https://horstmann.com/random/adjective"));
+      Future<String> f2 = service.submit(() -> get("https://horstmann.com/random/noun"));
+      String result = f1.get() + " " + f2.get();
+      System.out.println(result);
+      service.close();
+   }
+
+   private static HttpClient client = HttpClient.newHttpClient();
+
+   public static String get(String url) {
+      try {
+         var request = HttpRequest.newBuilder().uri(new URI(url)).GET().build();
+         return client.send(request, HttpResponse.BodyHandlers.ofString()).body();
+      } catch (Exception ex) {
+         var rex = new RuntimeException();
+         rex.initCause(ex);
+         throw rex;
+      }
+   }   
+}
+```
+
+A thread is called pinned in either of the two following situations:
+
+1. When executing a synchronized method or block
+2. When calling a native method or foreign function
+
+Being pinned is not bad in itself. But when a pinned thread blocks, it cannot be unmounted. The carrier thread is blocked, and, in Java 21, no additional carrier thread is started. That leaves fewer carrier threads for running virtual threads.
+
+Pinning is harmless if `synchronized` is used to avoid a race condition in an in-memory operation. However, if there are blocking calls, it would be best to replace `synchronized` with a `ReentrantLock`. This is of course only an option if you have control over the source code. The reason for this, is because up until Java 24, while code inside a `synchronized` block is running, Java cannot detect if that code is blocked or not. That task cannot be switched out for another virtual thread to execute. This was solved in Java 24.
+
+Minimize thread-local variables in virtual threads (as there will typically be a lot more virtual threads than if you were just using OS threads). Here's an example of thread locals in Java:
+```java
+public class VirtualThreadLocalExample {
+    private static final ThreadLocal<String> threadLocal = ThreadLocal.withInitial(() -> "Initial Value");
+
+    public static void main(String[] args) {
+        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            for (int i = 1; i <= 5; i++) {
+                final int taskId = i;
+                executor.submit(() -> {
+                    threadLocal.set("Task-" + taskId);
+                    System.out.println(Thread.currentThread() + ": " + threadLocal.get());
+                });
+            }
+        }
+    }
+}
+```
+
 ## Memory
 
 Three types of memory:
