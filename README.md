@@ -1,3 +1,7 @@
+# Resources
+
+- [https://dev.java/learn](https://dev.java/learn)
+
 # General
 
 The entrypoint of a Java application is a main method:
@@ -162,7 +166,69 @@ Annotations that apply to other annotations are called meta-annotations.
 
 # Exceptions
 
-Unchecked exceptions (ones that extend `RuntimeException`) are exceptions that are not checked for by the compiler. By “checked for”, we mean the compiler doesn’t check to see if it is caught or explicitly thrown by any calling methods. `RuntimeException` is intended to be used for programmer errors. As such it should never be caught, except in rare circumstances.
+An exception is an event, which occurs during the execution of a program, that disrupts the normal flow of the program's instructions.
+
+When an error occurs within a method, the method creates an object and hands it off to the runtime system. The object, called an exception object, contains information about the error, including its type and the state of the program when the error occurred. Creating an exception object and handing it to the runtime system is called throwing an exception.
+
+After a method throws an exception, the runtime system attempts to find something in the call stack to handle it.
+
+Three kinds of exceptions:
+- Checked exception: exceptional conditions that a well-written application should anticipate and recover from (e.g. `FileNotFoundException`). Subject to the catch (try-catch) or specify (throws) requirement. All except `Error` and `RuntimeException` are checked exceptions.
+- Error: excpetional conditions that are external to the application, and that the application usually cannot anticipate or recover from (e.g stack overflow). An application can choose to catch these kinds of exceptions.
+- Runtime exception: exceptional conditions that are internal to the application, and that the application usually cannot anticipate or recover from (e.g improper use of an API).
+
+You can catch more than one type of exception with one exception handler, with the multi-catch pattern:
+```java
+catch (IOException|SQLException ex) {
+    logger.log(ex);
+    throw ex;
+}
+```
+
+Note that the close methods of resources in a try-with-resources block are called in the opposite order of their creation.
+
+A try-with-resources differs from a try-catch-finally (with resource closure in the `finally` block) in the exceptions that are suppressed in certain edge cases. For example, if the `try` and `finally` blocks in a try-catch-finally both throw an exception, only the `finally` exception propagates (the `try` exception is suppressed). If a try-with-resources statement throws an exception and the try block throws an exception, only the `try` exception propagates. You can retrieve the suppressed exceptions by calling the `Throwable.getSuppressed()` method from the exception thrown.
+
+Exception handlers are checked in order.
+
+You can add unchecked exceptions into the `throws` clause of a method declaration (it accepts any `Throwable`), but it is not mandatory.
+
+You can `throw` any `Throwable`.
+
+An application often responds to an exception by throwing another exception. In effect, the first exception causes the second exception. It can be very helpful to know when one exception causes another. Chained Exceptions help the programmer do this.
+
+The following are the methods and constructors in `Throwable` that support chained exceptions:
+```java
+Throwable getCause()
+Throwable initCause(Throwable)
+Throwable(String, Throwable)
+Throwable(Throwable)
+```
+
+Here's an example:
+```java
+try {
+
+} catch (IOException e) {
+    throw new SampleException("Other IOException", e);
+}
+```
+
+You can access stack trace (execution history of the current thread and lists the names of the classes and methods that were called at the point when the exception occurred) information from an exception object.
+
+You should write your own exception classes if you answer yes to any of the following questions; otherwise, you can probably use someone else's.
+
+* Do you need an exception type that isn't represented by those in the Java platform?
+* Would it help users if they could differentiate your exceptions from those thrown by classes written by other vendors?
+* Does your code throw more than one related exception?
+* If you use someone else's exceptions, will users have access to those exceptions? A similar question is, should your package be independent and self-contained?
+
+"If it's so good to document a method's API, including the exceptions it can throw, why not specify runtime exceptions too?" Runtime exceptions represent problems that are the result of a programming problem, and as such, the API client code cannot reasonably be expected to recover from them or to handle them in any way. Such problems include arithmetic exceptions, such as dividing by zero; pointer exceptions, such as trying to access an object through a null reference; and indexing exceptions, such as attempting to access an array element through an index that is too large or too small.
+
+Advantages of exceptions:
+- Exceptions provide the means to separate the details of what to do when something out of the ordinary happens from the main logic of a program.
+- Easier propagation of errors up the call stack (as opposed to something like Go's error system, where you have to first check if an error is returned, throw it if it is returned, and proceed with the main logic if it isn't).
+- Grouping or categorization of exceptions is a natural outcome of the class hierarchy.
 
 # Compilation
 
@@ -309,6 +375,10 @@ Other vendors can distribute their own OpenJDK builds under the GPLv2+CPE licens
 New features to Java almost always start out as a JDK Enhancement Proposal (JEP). JEPs are typically for enhancements that are not ready to be specified yet. JSRs take mature ideas (e.g. resulting from a JEP) and produce a new or modified specification.
 
 Note that Oracle owns a lot of the copyright associated with Java and its APIs.
+
+## Java Evolution
+
+See [https://dev.java/evolution/](https://dev.java/evolution/).
 
 ## Memory
 
