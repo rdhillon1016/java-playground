@@ -510,3 +510,7 @@ Note that on a JDBC connection, you can start a transaction with `connection.set
 Note that if a DBMS doesn't support the isolation level specified, it will go with a higher, more restrictive isolation level. If it can't do that, then the driver will throw a SQLException. If you don't specify an isolation level, it will go with the DBMS default.
 
 An isolation level of a transaction A determines whether it can, for example, make or allow dirty reads from rows that other transactions are operating on. Other types of reads that are allowed/disallowed in certain isolation levels are nonrepeatable reads and phantom reads. In a nutshell, different isolation levels are implemented with locking algorithms of varying aggression.
+
+## Serialization
+
+`Serializable` is a marker interface -- it has no methods to implement. Java's built-in serialization mechanism uses it to identify if an object can be serialized (i.e by checking if the object is an instance of `Serializable`), which is useful for something like saving objects to a file. It is important to note that this interface isn't necessary in the case that you're using a serialization library (like Jackson) that doesn't rely on Java's built in serialization mechanism.
